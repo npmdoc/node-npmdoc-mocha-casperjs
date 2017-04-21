@@ -1,0 +1,224 @@
+<div class="apidocDiv">
+<style>
+/*csslint
+*/
+.apidocDiv {
+    background: #fff;
+    font-family: Arial, Helvetica, sans-serif;
+}
+.apidocDiv a[href] {
+    color: #33f;
+    font-weight: bold;
+    text-decoration: none;
+}
+.apidocDiv a[href]:hover {
+    text-decoration: underline;
+}
+.apidocCodeCommentSpan {
+    background: #bbf;
+    color: #000;
+    display: block;
+}
+.apidocCodeKeywordSpan {
+    color: #d00;
+    font-weight: bold;
+}
+.apidocCodePre {
+    background: #eef;
+    border: 1px solid;
+    color: #777;
+    padding: 5px;
+    white-space: pre-wrap;
+}
+.apidocFooterDiv {
+    margin-top: 20px;
+    text-align: center;
+}
+.apidocModuleLi {
+    margin-top: 10px;
+}
+.apidocSectionDiv {
+    border-top: 1px solid;
+    margin-top: 20px;
+}
+.apidocSignatureSpan {
+    color: #777;
+    font-weight: bold;
+}
+</style>
+<h1>api documentation for
+    <a
+
+    >mocha-casperjs (v0.6.0)</a>
+</h1>
+<h4>Write CasperJS tests using Mocha</h4>
+<div class="apidocSectionDiv"><a
+    href="#apidoc.tableOfContents"
+    id="apidoc.tableOfContents"
+><h1>table of contents</h1></a><ol>
+
+    <li class="apidocModuleLi"><a href="#apidoc.module.mocha-casperjs">module mocha-casperjs</a><ol>
+
+        <li>
+
+            <a class="apidocElementLiA" href="#apidoc.element.mocha-casperjs.mocha-casperjs">
+            function <span class="apidocSignatureSpan"></span>mocha-casperjs
+            <span class="apidocSignatureSpan">(Mocha, casper, utils)</span>
+            </a>
+
+        </li>
+
+    </ol></li>
+
+</ol></div>
+
+<div class="apidocSectionDiv">
+<h1><a href="#apidoc.module.mocha-casperjs" id="apidoc.module.mocha-casperjs">module mocha-casperjs</a></h1>
+
+
+    <h2>
+        <a href="#apidoc.element.mocha-casperjs.mocha-casperjs" id="apidoc.element.mocha-casperjs.mocha-casperjs">
+        function <span class="apidocSignatureSpan"></span>mocha-casperjs
+        <span class="apidocSignatureSpan">(Mocha, casper, utils)</span>
+        </a>
+    </h2>
+    <ul>
+    <li>description and source-code<pre class="apidocCodePre">mocha-casperjs = function (Mocha, casper, utils) {
+  var currentDone,
+      currentTest,
+      f = utils.format,
+
+  reportError = function() {
+    casper.checker = null
+    if (currentDone &#x26;&#x26; (!currentTest || !currentTest.state)) {
+      // the first error takes priority
+      currentDone(currentTest.errors &#x26;&#x26; currentTest.errors[0])
+    }
+  },
+
+  failTest = function(error) {
+    casper.unwait()
+    clearInterval(casper.checker)
+
+    if (currentTest.errors) {
+      currentTest.errors.push(error)
+    } else {
+      currentTest.errors = [error]
+    }
+
+    if ( casper.step &#x3c; casper.steps.length ) {
+      casper.run(function() {
+        reportError();
+      });
+    } else {
+      reportError();
+    }
+  },
+
+  resetSteps = function() {
+    casper.bypass(casper.steps.length)
+  }
+
+  Mocha.prototype.failCurrentTest = failTest;
+
+  // hookup to all the various casper error events and save that error to report to mocha later
+  [
+    &#x27;error&#x27;,
+    &#x27;wait.error&#x27;,
+    &#x27;waitFor.timeout.error&#x27;,
+    &#x27;event.error&#x27;,
+    &#x27;complete.error&#x27;,
+    &#x27;step.error&#x27;
+  ].forEach(function(event) {
+    casper.on(event, function(error) {
+      failTest(error)
+    })
+  })
+
+  casper.on(&#x27;waitFor.timeout&#x27;, function(timeout, details) {
+    resetSteps()
+    var message = f(&#x27;waitFor timeout of %dms occured&#x27;, timeout)
+    details = details || {}
+
+    if (details.selector) {
+      message = f(details.waitWhile ? &#x27;&#x22;%s&#x22; never went away in %dms&#x27; : &#x27;&#x22;%s&#x22; still did not exist %dms&#x27;, details.selector, timeout
+)
+    }
+    else if (details.visible) {
+      message = f(details.waitWhile ? &#x27;&#x22;%s&#x22; never disappeared in %dms&#x27; : &#x27;&#x22;%s&#x22; never appeared in %dms&#x27;, details.visible, timeout
+)
+    }
+    else if (details.url) {
+      message = f(&#x27;%s did not load in %dms&#x27;, details.url, timeout)
+    }
+    else if (details.popup) {
+      message = f(&#x27;%s did not pop up in %dms&#x27;, details.popup, timeout)
+    }
+    else if (details.text) {
+      message = f(&#x27;&#x22;%s&#x22; did not appear in the page in %dms&#x27;, details.text, timeout)
+    }
+    else if (details.selectorTextChange) {
+      message = f(&#x27;&#x22;%s&#x22; did not have a text change in %dms&#x27;, details.selectorTextChange, timeout)
+    }
+    else if (typeof details.testFx === &#x27;Function&#x27;) {
+      message = f(&#x27;&#x22;%s&#x22; did not appear in the page in %dms&#x27;, details.testFx.toString(), timeout)
+    }
+
+    failTest(new Error(message))
+  })
+
+  casper.on(&#x27;step.timeout&#x27;, function(step) {
+    resetSteps()
+    failTest(new Error(f(&#x27;step %d timed out (%dms)&#x27;, step, casper.options.stepTimeout)))
+  })
+  casper.on(&#x27;timeout&#x27;, function() {
+    resetSteps()
+    failTest(new Error(f(&#x27;Load timeout of (%dms)&#x27;, casper.options.timeout)))
+  })
+
+  // clear Casper&#x27;s default handlers for these as we handle everything through events
+  casper.options.onTimeout = casper.options.onWaitTimeout = casper.options.onStepTimeout = function() {}
+
+  // casper will exit on step failure by default
+  casper.options.silentErrors = true
+
+  // Method for patching mocha to run casper steps is inspired by https://github.com/domenic/mocha-as-promised
+  //
+  Object.defineProperties(Mocha.Runnable.prototype, {
+    fn: {
+      configurable: true,
+      enumerable: true,
+      get: function () {
+        return this.casperWraperFn;
+      },
+      set: function (fn) {
+        Object.defineProperty(this, &#x27;casperWraperFn&#x27;, {
+          value: function (done) {
+            currentTest = this.test
+            currentDone = done
+
+            // Run the original `fn`, passing along `done` for the case in which it&#x27;s callback-asynchronous.
+            // Make sure to forward the `this` context, since you can set variables and stuff on it to share
+            // within a suite.
+            fn.call(this, done)
+
+            // only flush the casper steps on test Runnables,
+            // and if there are steps not ran,
+            // and no set of steps are running (casper.checker is the setInterval for the checkSteps call)
+
+            if (currentTest &#x26;&#x26; casper.steps &#x26;&#x26; casper.steps.length &#x26;&#x26;
+                casper.step &#x3c; casper.steps.length &#x26;&#x26; !casper.checker) {
+              casper.run(function () {
+                casper.checker = null ...</pre></li>
+    <li>example usage<pre class="apidocCodePre">n/a</pre></li>
+    </ul>
+
+
+</div>
+
+<div class="apidocFooterDiv">
+    [ this document was created with
+    <a href="https://github.com/kaizhu256/node-utility2" target="_blank">utility2</a>
+    ]
+</div>
+</div>
